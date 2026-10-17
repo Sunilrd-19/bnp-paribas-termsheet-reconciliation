@@ -1,0 +1,27 @@
+Term Sheet
+ISIN: NO 0010894330
+Genel Energy Finance 4 Limited
+Senior Unsecured Guaranteed Callable Bond Issue 2020/2025
+(the "Bonds" or the "Bond Issue")
+Issue Date: Expected to be 14 October 2020
+
+Issuer: Genel Energy Finance 4 Limited (incorporated in England, company registration number 11867181) and LEI number 213800H4JDISDH7KBK45 (to be converted into a public limited company (plc) prior to the Issue Date).
+Parent: Genel Energy plc (incorporated in Jersey, company registration number 107897).
+Guarantors: The Parent, Genel Energy Holding Company Ltd. (incorporated in Jersey, company registration number 107896) ("GEHCL"), Genel Energy International Ltd (Anguilla) (incorporated in Anguilla, company registration number 2081599) ("GEIL") (each a "Guarantor").
+Currency: USD
+Issue Amount: USD 300,000,000
+Coupon Rate: 9.25% p.a., semi-annual interest payments.
+Issue Price: 97% of the Nominal Amount.
+Issue Date: Expected to be 14 October 2020.
+Maturity Date: Expected to be 14 October 2025 (5 years after Issue Date).
+First Interest Payment Date: Expected to be 14 April 2021 (6 months after Issue Date).
+Last Interest Payment Date: Maturity Date.
+Interest Payments: Interest on the Bonds will start to accrue on Issue Date and shall be payable semi-annually in arrears on the interest payment day in April and October each year (each an "Interest Payment Date"). Day-count fraction for coupon is "30/360", business day convention is "unadjusted" and business day is "Oslo" and "New York".
+Amortization: The Bonds shall be repaid in full at the Maturity Date at 100% of the Nominal Amount together with accrued interest on the redeemed Bonds.
+Nominal Amount: The Bonds will have a nominal amount of USD 2,000 each.
+Minimum Subscription: Minimum subscription and allotment amount shall be USD 200,000, and higher amounts can be subscribed for in integral multiples of USD 100,000 in excess thereof.
+Status of the Bonds: The Bonds shall constitute senior debt obligations of the Issuer. The Bonds shall be guaranteed but unsecured.
+Purpose of the Bond Issue: Purpose of the bond is to refinance the existing bond issue with ISIN NO 001 071088.2 and other general corporate purposes.
+Manager: Pareto Securities AS, Dronning Mauds gt. 3, NO-0115 Oslo, Norway.
+Trustee: Nordic Trustee AS, P.O. Box NO-1470 Vika, NO-0116 Oslo, Norway.
+Securities Depository: The Bonds will be registered in the Norwegian Central Securities Depository VPS ASA (the "CSD").
