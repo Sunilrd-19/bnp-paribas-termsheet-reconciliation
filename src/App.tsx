@@ -301,12 +301,16 @@ export default function App() {
               ? s.id.startsWith('idbi-bank')
               : false
           );
-          extractedText = matchedScenario?.termSheetFullText || rawAscii.trim() || file.name;
+          extractedText =
+            matchedScenario?.termSheetText ||
+            matchedScenario?.baselineReport?.termSheetFullText ||
+            String(rawAscii || '').trim() ||
+            file.name;
         }
 
         setTermSheetFileName(file.name);
         setTermSheetFormat(detectedFormat);
-        setTermSheetText(extractedText);
+        setTermSheetText(extractedText || file.name);
       }
     } catch (err: any) {
       setErrorBanner(err.message || 'Error parsing uploaded document.');
@@ -327,7 +331,7 @@ export default function App() {
   };
 
   const handleRunLiveReconciliation = async () => {
-    if (!termSheetText.trim() || !bookingRawContent.trim()) {
+    if (!String(termSheetText ?? '').trim() || !String(bookingRawContent ?? '').trim()) {
       setErrorBanner(
         'Please upload both a Trade Term Sheet (PDF/DOCX) and a Booking System Extract (CSV/JSON/XML) before running analysis.'
       );
@@ -525,7 +529,9 @@ export default function App() {
     }
   };
 
-  const canRunAnalysis = Boolean(termSheetText.trim() && bookingRawContent.trim());
+  const canRunAnalysis = Boolean(
+    String(termSheetText ?? '').trim() && String(bookingRawContent ?? '').trim()
+  );
 
   // Theme surface classes
   const pageBg = isDarkMode ? 'bg-[#0B111E] text-slate-100' : 'bg-[#F4F6F8] text-[#1A1A1A]';

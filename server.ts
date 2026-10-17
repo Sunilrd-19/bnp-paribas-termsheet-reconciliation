@@ -137,7 +137,9 @@ app.post('/api/parse-document', async (req, res) => {
           fileName,
           format: 'PDF',
           extractedText:
-            fallbackScenario?.termSheetFullText || buffer.toString('utf-8').trim(),
+            fallbackScenario?.termSheetText ||
+            fallbackScenario?.baselineReport?.termSheetFullText ||
+            buffer.toString('utf-8').trim(),
         });
       }
     }

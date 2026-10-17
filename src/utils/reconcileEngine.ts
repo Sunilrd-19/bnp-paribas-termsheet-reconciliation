@@ -906,13 +906,22 @@ export function buildDeterministicReconciliationReport(params: {
     return false;
   });
 
+  const safeBookingRaw = String(bookingRawContent ?? '').trim();
+  const safeTermSheetText = String(termSheetText ?? '').trim();
+  const presetBookingRaw = String(
+    matchingPreset?.bookingRaw ?? matchingPreset?.baselineReport?.bookingRawContent ?? ''
+  ).trim();
+  const presetTermSheetText = String(
+    matchingPreset?.termSheetText ?? matchingPreset?.baselineReport?.termSheetFullText ?? ''
+  ).trim();
+
   // Only return the exact preset baseline if BOTH the Term Sheet AND Booking Raw Content are unmodified
   if (
     matchingPreset &&
-    bookingRawContent.trim() === matchingPreset.bookingRawContent.trim() &&
-    (!termSheetText.trim() ||
-      termSheetText.trim() === matchingPreset.termSheetFullText.trim() ||
-      termSheetText.length > 100)
+    safeBookingRaw === presetBookingRaw &&
+    (!safeTermSheetText ||
+      safeTermSheetText === presetTermSheetText ||
+      safeTermSheetText.length > 100)
   ) {
     // Verify that every trade's coupon, notional, maturity in bookingTrades matches the preset's trades
     const presetTrades = matchingPreset.baselineReport.tradeReconciliations;
@@ -938,15 +947,15 @@ export function buildDeterministicReconciliationReport(params: {
         bookingFileName: bookingFileName || matchingPreset.bookingFileName,
         bookingFormat: detectedBookingFormat,
         executedAt: new Date().toISOString(),
-        termSheetFullText: termSheetText || matchingPreset.termSheetFullText,
-        bookingRawContent,
+        termSheetFullText: safeTermSheetText || presetTermSheetText,
+        bookingRawContent: safeBookingRaw,
       };
     }
   }
 
   // Dynamically extract attributes from the uploaded Term Sheet text
   const extractedTermSheetFields = extractAttributesFromTermSheetText(
-    termSheetText,
+    safeTermSheetText,
     consensusNotional
   );
 
