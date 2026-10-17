@@ -476,14 +476,14 @@ export function ReconciliationAnalyticsDashboard({
                             }
                           }
                         }}
-                        className={`p-2.5 rounded-sm border transition-all cursor-pointer ${
+                        className={`p-2.5 rounded-sm border transition-all duration-200 ease-out transform-gpu hover:scale-[1.02] hover:-translate-y-0.5 hover:shadow-md cursor-pointer ${
                           isSelected
                             ? isDarkMode
-                              ? 'bg-slate-800 border-emerald-400'
-                              : 'bg-white border-[#008053] shadow-xs'
+                              ? 'bg-slate-800 border-emerald-400 shadow-sm'
+                              : 'bg-white border-[#008053] shadow-sm'
                             : isDarkMode
-                            ? 'border-slate-800 hover:border-slate-700'
-                            : 'border-slate-200/80 bg-white/60 hover:bg-white'
+                            ? 'border-slate-800 hover:border-slate-700 hover:shadow-black/40'
+                            : 'border-slate-200/80 bg-white/60 hover:bg-white hover:shadow-slate-200/90'
                         }`}
                       >
                         <div className="flex items-center justify-between text-xs mb-1.5">
@@ -601,14 +601,14 @@ export function ReconciliationAnalyticsDashboard({
                           onClick={() =>
                             onSelectFieldCell(item.firstAnomalyTradeId, item.fieldKey)
                           }
-                          className={`p-2.5 rounded-sm border transition-colors cursor-pointer ${
+                          className={`p-2.5 rounded-sm border transition-all duration-200 ease-out transform-gpu hover:scale-[1.015] hover:-translate-y-0.5 hover:shadow-md cursor-pointer ${
                             isSelected
                               ? isDarkMode
-                                ? 'bg-slate-800 border-emerald-400'
-                                : 'bg-white border-[#008053] shadow-xs'
+                                ? 'bg-slate-800 border-emerald-400 shadow-sm'
+                                : 'bg-white border-[#008053] shadow-sm'
                               : isDarkMode
-                              ? 'border-slate-800 hover:border-slate-700'
-                              : 'border-slate-200/80 bg-white/60 hover:bg-white'
+                              ? 'border-slate-800 hover:border-slate-700 hover:shadow-black/40'
+                              : 'border-slate-200/80 bg-white/60 hover:bg-white hover:shadow-slate-200/90'
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2 text-xs mb-1">
@@ -769,10 +769,15 @@ export function ReconciliationAnalyticsDashboard({
                   }`}
                 >
                   {report.tradeReconciliations.map((tRow) => (
-                    <tr key={tRow.tradeId}>
+                    <tr
+                      key={tRow.tradeId}
+                      className={`transition-all duration-200 ease-out transform-gpu hover:scale-[1.005] hover:shadow-sm ${
+                        isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-white'
+                      }`}
+                    >
                       <td
                         onClick={() => onSelectTradeId(Number(tRow.tradeId))}
-                        className={`py-2 px-2.5 text-xs font-mono font-bold whitespace-nowrap cursor-pointer hover:underline ${headingText}`}
+                        className={`py-2 px-2.5 text-xs font-mono font-bold whitespace-nowrap cursor-pointer transition-transform duration-150 hover:scale-105 hover:underline ${headingText}`}
                       >
                         Trade #{tRow.tradeId}
                       </td>
@@ -798,7 +803,7 @@ export function ReconciliationAnalyticsDashboard({
                                 onSelectFieldCell(tRow.tradeId, cell.fieldKey)
                               }
                               title={`Trade #${tRow.tradeId} · ${cell.bookingHeader}\nStatus: ${cell.status}\nTerm Sheet: ${cell.termSheetRaw ?? '—'}\nBooked: ${cell.bookingValue ?? '—'}\nReason: ${cell.reason}`}
-                              className={`w-full min-w-[28px] h-7 rounded-xs font-mono text-xs font-bold flex items-center justify-center transition-transform cursor-pointer ${getCellBadgeStyle(
+                              className={`w-full min-w-[28px] h-7 rounded-xs font-mono text-xs font-bold flex items-center justify-center transition-all duration-150 ease-out transform-gpu hover:scale-110 hover:shadow-md cursor-pointer ${getCellBadgeStyle(
                                 cell.status,
                                 isCellSelected
                               )}`}

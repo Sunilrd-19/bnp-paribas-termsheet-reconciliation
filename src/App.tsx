@@ -1236,12 +1236,12 @@ export default function App() {
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
                         <button
                           onClick={() => setSelectedTradeId('ALL')}
-                          className={`p-3 rounded-sm border text-left transition-colors cursor-pointer flex flex-col justify-between ${
+                          className={`p-3 rounded-sm border text-left transition-all duration-200 ease-out transform-gpu hover:scale-[1.025] hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] cursor-pointer flex flex-col justify-between ${
                             selectedTradeId === 'ALL'
-                              ? 'bg-[#008053] text-white border-[#008053]'
+                              ? 'bg-[#008053] text-white border-[#008053] shadow-sm'
                               : isDarkMode
-                              ? 'bg-[#0F172A] border-slate-800 hover:bg-slate-800 text-slate-100'
-                              : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-[#1A1A1A]'
+                              ? 'bg-[#0F172A] border-slate-800 hover:bg-slate-800 hover:shadow-black/40 text-slate-100'
+                              : 'bg-slate-50 border-slate-200 hover:bg-white hover:shadow-slate-200/90 text-[#1A1A1A]'
                           }`}
                         >
                           <div className="text-xs font-bold font-mono">
@@ -1273,16 +1273,16 @@ export default function App() {
                                   tRow.fields[0];
                                 if (firstBreak) setSelectedFieldKey(firstBreak.fieldKey);
                               }}
-                              className={`p-3 rounded-sm border text-left transition-colors cursor-pointer ${
+                              className={`p-3 rounded-sm border text-left transition-all duration-200 ease-out transform-gpu hover:scale-[1.025] hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] cursor-pointer ${
                                 isSelected
-                                  ? 'bg-[#008053] text-white border-[#008053]'
+                                  ? 'bg-[#008053] text-white border-[#008053] shadow-sm'
                                   : hasMismatch
                                   ? isDarkMode
-                                    ? 'bg-red-950/30 border-red-800/60 hover:bg-red-950/50 text-slate-100'
-                                    : 'bg-red-50/50 border-red-200 hover:bg-red-50 text-[#1A1A1A]'
+                                    ? 'bg-red-950/30 border-red-800/60 hover:bg-red-950/50 hover:shadow-red-950/40 text-slate-100'
+                                    : 'bg-red-50/50 border-red-200 hover:bg-red-50 hover:shadow-red-100/80 text-[#1A1A1A]'
                                   : isDarkMode
-                                  ? 'bg-[#0F172A] border-slate-800 hover:bg-slate-800 text-slate-100'
-                                  : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-[#1A1A1A]'
+                                  ? 'bg-[#0F172A] border-slate-800 hover:bg-slate-800 hover:shadow-black/40 text-slate-100'
+                                  : 'bg-slate-50 border-slate-200 hover:bg-white hover:shadow-slate-200/90 text-[#1A1A1A]'
                               }`}
                             >
                               <div className="flex items-center justify-between gap-2 mb-1">
@@ -1448,18 +1448,18 @@ export default function App() {
                                     setSelectedFieldKey(row.fieldKey);
                                     setSelectedInspectorTradeId(row.tradeId);
                                   }}
-                                  className={`cursor-pointer transition-colors ${
+                                  className={`relative cursor-pointer transition-all duration-200 ease-out transform-gpu hover:scale-[1.008] hover:shadow-md hover:z-10 ${
                                     isSelected
                                       ? isDarkMode
-                                        ? 'bg-[#008053]/20'
-                                        : 'bg-[#008053]/10'
+                                        ? 'bg-[#008053]/20 shadow-xs'
+                                        : 'bg-[#008053]/10 shadow-xs'
                                       : row.status === 'TRUE_MISMATCH'
                                       ? isDarkMode
-                                        ? 'bg-red-950/20 hover:bg-red-950/40'
-                                        : 'bg-red-50/30 hover:bg-red-50/60'
+                                        ? 'bg-red-950/20 hover:bg-red-950/40 hover:shadow-red-950/40'
+                                        : 'bg-red-50/30 hover:bg-red-50/80 hover:shadow-red-100/80'
                                       : isDarkMode
-                                      ? 'hover:bg-slate-800/50'
-                                      : 'hover:bg-slate-50'
+                                      ? 'hover:bg-slate-800/70 hover:shadow-black/40'
+                                      : 'hover:bg-white hover:shadow-slate-200/90'
                                   }`}
                                 >
                                   <td className={`py-2.5 px-3 align-top font-mono font-semibold whitespace-nowrap ${mutedText}`}>
