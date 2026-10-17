@@ -80,7 +80,7 @@ class TermSheetStrictPydanticSchema(BaseModel):
     BusinessDayLocation: str = Field(..., description="Financial center holiday calendar (e.g., Oslo|New York, Mumbai)")
     AmortizationType: str = Field(..., description="Principal repayment profile (e.g., Bullet, Perpetual, Amortizing)")
     MinimumSubscription: float = Field(..., description="Minimum permissible subscription amount in base currency as float")
-    GoverningLaw: str = Field(..., description="Governing law jurisdiction (e.g., Norwegian Law, Indian Law)")
+    Parent: str = Field(..., description="Parent company or guarantor entity name (e.g., Genel Energy plc, IDBI Bank Limited)")
 
     @field_validator("ISIN")
     @classmethod
@@ -128,7 +128,7 @@ FIELD_TYPE_EXPECTATIONS: Dict[str, str] = {
     "BusinessDayLocation": "STRING",
     "AmortizationType": "STRING",
     "MinimumSubscription": "FLOAT",
-    "GoverningLaw": "STRING",
+    "Parent": "STRING",
 }
 
 
@@ -143,7 +143,7 @@ def validate_single_field_type(field_name: str, value: Any) -> Tuple[bool, Optio
     if value is None or str(value).strip().upper() in ("", "N/A", "NONE", "NULL", "NOT SPECIFIED", "NOT EXPLICITLY STATED IN TERM SHEET"):
         return True, None
 
-    raw_str = str(value).strip()
+    raw_str = "|".join(str(x) for x in value) if isinstance(value, list) else str(value).strip()
     if expected_type == "FLOAT":
         cleaned = re.sub(r"[,$%\s]|USD|INR|EUR|GBP|RS\.?", "", raw_str, flags=re.IGNORECASE)
         try:
@@ -198,7 +198,14 @@ def load_booking_extract(file_path: str) -> List[Dict[str, Any]]:
     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
         if ext == ".json":
             data = json.load(f)
-            return data if isinstance(data, list) else data.get("trades", [data])
+            trades = data if isinstance(data, list) else data.get("trades", [data])
+            normalized_trades = []
+            for row in trades:
+                norm_row = {}
+                for k, v in row.items():
+                    norm_row[k] = "|".join(str(x) for x in v) if isinstance(v, list) else v
+                normalized_trades.append(norm_row)
+            return normalized_trades
         else:
             reader = csv.DictReader(f)
             return [dict(row) for row in reader]

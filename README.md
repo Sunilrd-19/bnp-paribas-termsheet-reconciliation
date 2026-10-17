@@ -10,13 +10,15 @@ An end-to-end, two-pass LLM fixed-income trade term sheet reconciliation solutio
 ├── reconcile_termsheet.py                      # Standalone Python CLI script (Pydantic + google-genai 2-Pass Pipeline)
 ├── requirements.txt                            # Python dependencies (google-genai, pydantic, pypdf, python-docx)
 ├── DOCUMENTATION.md                            # Concise 2-page technical report (Workflow, LLM Design, Challenges, DevOps)
-├── sample_data/                                # Supplied sample Term Sheets & Booking System Extracts
-│   ├── Genel_Energy_Finance_4_Term_Sheet.txt   # Sample 1: Genel Energy USD 300M 9.25% Senior Unsecured Bond Term Sheet
-│   ├── Genel_Energy_bond_trades.csv            # Sample 1: Multi-trade Booking Extract (CSV)
-│   ├── Genel_Energy_bond_trades.json           # Sample 1: Multi-trade Booking Extract (JSON)
-│   ├── IDBI_Bank_Omni_AT1_Term_Sheet.txt       # Sample 2: IDBI Bank Rs.1,500 Cr 10.75% Perpetual AT1 Bond Term Sheet
-│   ├── IDBI_Bank_bond_trades.csv               # Sample 2: Multi-trade Booking Extract (CSV)
-│   └── IDBI_Bank_bond_trades.json              # Sample 2: Multi-trade Booking Extract (JSON)
+├── sample_data/                                # Supplied sample Term Sheets (PDF/TXT) & Booking Extracts (CSV/JSON)
+│   ├── 4.Term Sheet - Genel Energy.pdf         # Sample 1 (PDF): Genel Energy USD 300M 9.25% Senior Unsecured Bond Term Sheet
+│   ├── Genel_Energy.csv                        # Sample 1 (CSV): Multi-trade Booking Extract
+│   ├── Genel_Energy.json                       # Sample 1 (JSON): Multi-trade Booking Extract
+│   ├── 3.Term Sheet - IDBI.pdf                 # Sample 2 (PDF): IDBI Bank Rs.1,500 Cr 10.75% Perpetual AT1 Bond Term Sheet
+│   ├── IDBI_Omni.csv                           # Sample 2 (CSV): Multi-trade Booking Extract
+│   ├── IDBI_Omni.json                          # Sample 2 (JSON): Multi-trade Booking Extract
+│   ├── Genel_Energy_Finance_4_Term_Sheet.txt   # Text mirror of Sample 1 Term Sheet
+│   └── IDBI_Bank_Omni_AT1_Term_Sheet.txt       # Text mirror of Sample 2 Term Sheet
 ├── server.ts                                   # Express API backend (/api/parse-document & /api/reconcile)
 ├── src/                                        # Full-Stack Interactive Web Workbench (React + TypeScript + Tailwind)
 │   ├── App.tsx                                 # Main Reconciliation Workbench & Verbatim Evidence Viewer
@@ -36,7 +38,7 @@ An end-to-end, two-pass LLM fixed-income trade term sheet reconciliation solutio
 
 ```bash
 # Clone the repository
-git clone https://github.com/<YOUR_USERNAME>/bnp-paribas-termsheet-reconciliation.git
+git clone https://github.com/Sunilrd-19/bnp-paribas-termsheet-reconciliation.git
 cd bnp-paribas-termsheet-reconciliation
 
 # Create and activate a virtual environment (optional but recommended)
@@ -48,7 +50,7 @@ pip install -r requirements.txt
 ```
 
 ### 2. API Key Configuration
-Set the `GEMINI_API_KEY` environment variable in your terminal:
+Set the `GEMINI_API_KEY` environment variable in your terminal (or place `GEMINI_API_KEY="your_key"` inside a `.env` file):
 
 ```bash
 # macOS / Linux
@@ -60,24 +62,24 @@ $env:GEMINI_API_KEY="your_gemini_api_key_here"
 
 ### 3. End-to-End Execution on Supplied Sample Data
 
-#### Run Default Workflow (Genel Energy Term Sheet vs. CSV Booking Extract)
+#### Run Default Workflow
 ```bash
 python reconcile_termsheet.py
 ```
 
-#### Run on Genel Energy (JSON Booking Extract)
+#### Run on Genel Energy PDF Term Sheet (`4.Term Sheet - Genel Energy.pdf`) vs. CSV / JSON Booking Extract
 ```bash
 python reconcile_termsheet.py \
-  --termsheet "sample_data/Genel_Energy_Finance_4_Term_Sheet.txt" \
-  --booking "sample_data/Genel_Energy_bond_trades.json" \
+  --termsheet "sample_data/4.Term Sheet - Genel Energy.pdf" \
+  --booking "sample_data/Genel_Energy.csv" \
   --output "genel_reconciliation_report.json"
 ```
 
-#### Run on IDBI Bank Omni AT1 Perpetual Bond (CSV or JSON Booking Extract)
+#### Run on IDBI Bank Omni AT1 PDF Term Sheet (`3.Term Sheet - IDBI.pdf`) vs. CSV / JSON Booking Extract
 ```bash
 python reconcile_termsheet.py \
-  --termsheet "sample_data/IDBI_Bank_Omni_AT1_Term_Sheet.txt" \
-  --booking "sample_data/IDBI_Bank_bond_trades.csv" \
+  --termsheet "sample_data/3.Term Sheet - IDBI.pdf" \
+  --booking "sample_data/IDBI_Omni.csv" \
   --output "idbi_reconciliation_report.json"
 ```
 
