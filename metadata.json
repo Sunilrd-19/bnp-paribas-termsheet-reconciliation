@@ -1,0 +1,6 @@
+{
+  "name": "TermRecon AI — Capital Markets Term Sheet Reconciliation",
+  "description": "Automated LLM-powered trade term sheet extraction, strict schema validation, and two-pass semantic false alert reconciliation workbench with full Python GitHub repository generator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
