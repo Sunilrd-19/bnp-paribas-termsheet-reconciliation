@@ -6,3 +6,15 @@ coverage/
 *.log
 .env*
 !.env.example
+BNP_Paribas_L2_Interview_Preparation_Guide.docx
+public/BNP_Paribas_L2_Interview_Preparation_Guide.docx
+scripts/generate-interview-docx.ts
+BNP_Paribas_Architecture_Flowchart_and_API_Code_Guide.docx
+public/BNP_Paribas_Architecture_Flowchart_and_API_Code_Guide.docx
+scripts/generate-flowchart-api-docx.ts
+BNP_Paribas_Technical_Workflow_Presentation.pptx
+public/BNP_Paribas_Technical_Workflow_Presentation.pptx
+scripts/generate-pptx.ts
+
+
+

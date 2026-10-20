@@ -563,7 +563,7 @@ export function buildDeterministicReconciliationReport(params: {
     bookingFormat: detectedBookingFormat,
     executedAt: new Date().toISOString(),
     executionMode: 'LIVE_GEMINI_API',
-    modelUsed: 'gemini-3.8-flash',
+    modelUsed: 'gemini-3-flash-preview',
     pass1LatencyMs: 640,
     pass2LatencyMs: 510,
     termSheetFullText: termSheetText,

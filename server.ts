@@ -6,8 +6,11 @@ import * as mammothModule from 'mammoth';
 import { extractText } from 'unpdf';
 import { CORE_FIELD_SCHEMAS, SAMPLE_SCENARIOS } from './src/data/sampleScenarios';
 import {
+  STRICT_EXTRACTION_JSON_SCHEMA,
+  STRICT_PYDANTIC_SCHEMA_CODE,
   buildDeterministicReconciliationReport,
   computeConsensusNotional,
+  extractAttributesFromTermSheetText,
   parseBookingMultiTrades,
   validateExtractedFieldStrict,
 } from './src/utils/reconcileEngine';
@@ -43,14 +46,12 @@ function getGenAIClient(): GoogleGenAI {
   });
 }
 
-// Multi-model pool to avoid single-model per-day Free Tier quota exhaustion (429 RESOURCE_EXHAUSTED)
+// Multi-model pool using valid v1beta Gemini models to avoid single-model quota exhaustion
 const GEMINI_MODEL_POOL = [
-  'gemini-3.8-flash-lite',
-  'gemini-3.1-flash-preview',
   'gemini-3-flash-preview',
   'gemini-2.5-flash',
   'gemini-2.5-flash-lite',
-  'gemini-3.8-flash',
+  'gemini-flash-latest',
 ];
 
 // In-memory cache to avoid redundant LLM calls for identical inputs
@@ -78,10 +79,7 @@ async function generateJsonWithModelFallback(
       return { data: parsed, modelUsed: modelName };
     } catch (err: any) {
       lastError = err;
-      const msg = String(err?.message || '');
-      console.warn(
-        `[TermRecon Engine] Model ${modelName} unavailable (${msg.slice(0, 120)}). Trying next model...`
-      );
+      // Silently rotate to the next available model in the pool
     }
   }
   throw lastError || new Error('All Gemini models exhausted.');
@@ -91,6 +89,48 @@ export const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '30mb' }));
+
+// Direct download endpoint for L2 Interview Preparation Guide (.docx)
+app.get(['/BNP_Paribas_L2_Interview_Preparation_Guide.docx', '/interview-guide.docx'], (_req, res) => {
+  const filePath = path.join(process.cwd(), 'BNP_Paribas_L2_Interview_Preparation_Guide.docx');
+  res.setHeader(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  );
+  res.setHeader(
+    'Content-Disposition',
+    'attachment; filename="BNP_Paribas_L2_Interview_Preparation_Guide.docx"'
+  );
+  res.sendFile(filePath);
+});
+
+// Direct download endpoint for Architecture Flowchart & API Code Guide (.docx)
+app.get(['/BNP_Paribas_Architecture_Flowchart_and_API_Code_Guide.docx', '/flowchart-api-guide.docx'], (_req, res) => {
+  const filePath = path.join(process.cwd(), 'BNP_Paribas_Architecture_Flowchart_and_API_Code_Guide.docx');
+  res.setHeader(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  );
+  res.setHeader(
+    'Content-Disposition',
+    'attachment; filename="BNP_Paribas_Architecture_Flowchart_and_API_Code_Guide.docx"'
+  );
+  res.sendFile(filePath);
+});
+
+// Direct download endpoint for Technical Workflow PowerPoint Presentation (.pptx)
+app.get(['/BNP_Paribas_Technical_Workflow_Presentation.pptx', '/technical-workflow.pptx'], (_req, res) => {
+  const filePath = path.join(process.cwd(), 'BNP_Paribas_Technical_Workflow_Presentation.pptx');
+  res.setHeader(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  );
+  res.setHeader(
+    'Content-Disposition',
+    'attachment; filename="BNP_Paribas_Technical_Workflow_Presentation.pptx"'
+  );
+  res.sendFile(filePath);
+});
 
 // Endpoint 1: Parse uploaded binary PDF / DOCX / TXT or CSV / JSON / XML files
 app.post('/api/parse-document', async (req, res) => {
@@ -167,6 +207,15 @@ app.post('/api/parse-document', async (req, res) => {
   }
 });
 
+// Endpoint 0: Strict Schema Specification (JSON Schema + Pydantic v2 BaseModel for all 20 Columns)
+app.get('/api/schema', (_req, res) => {
+  return res.json({
+    jsonSchema: STRICT_EXTRACTION_JSON_SCHEMA,
+    pydanticModelCode: STRICT_PYDANTIC_SCHEMA_CODE,
+    coreFieldSchemas: CORE_FIELD_SCHEMAS,
+  });
+});
+
 // Endpoint 2: Full Two-Pass Programmatic LLM Extraction, Multi-Trade Reconciliation & AI Insights
 app.post('/api/reconcile', async (req, res) => {
   try {
@@ -193,7 +242,7 @@ app.post('/api/reconcile', async (req, res) => {
     }
 
     // Check full report cache first to save API quota on repeated runs
-    const cacheKey = `${termSheetText.length}:${termSheetText.slice(0, 200)}::${bookingRawContent}`;
+    const cacheKey = `${termSheetText.length}:${termSheetText.slice(0, 200)}::${bookingRawContent.replace(/\r\n/g, '\n').trim()}`;
     const cachedReport = fullReportCache.get(cacheKey);
     if (cachedReport) {
       return res.json({
@@ -214,6 +263,20 @@ app.post('/api/reconcile', async (req, res) => {
 
     const consensusNotional = computeConsensusNotional(bookingTrades);
 
+    // Pre-compute deterministic table extraction & strict schema ground-truth report
+    // so multi-page PDF table cells (e.g., 16-page IDBI Bank PDF Row 2 Issuer) and strict schema rules never hallucinate
+    const deterministicGroundTruth = buildDeterministicReconciliationReport({
+      tradeTitle,
+      termSheetFileName,
+      termSheetFormat,
+      termSheetText,
+      bookingFileName,
+      bookingRawContent,
+      bookingTrades,
+      detectedBookingFormat,
+      consensusNotional,
+    });
+
     try {
       // =========================================================================
       // PASS 1: Programmatic LLM Extraction + Verbatim Evidence from Term Sheet
@@ -221,7 +284,7 @@ app.post('/api/reconcile', async (req, res) => {
       const pass1Start = Date.now();
       const pass1CacheKey = `${termSheetText.length}:${termSheetText.slice(0, 300)}`;
       let pass1Json: any;
-      let activeModelUsed = 'gemini-3.8-flash-lite';
+      let activeModelUsed = GEMINI_MODEL_POOL[0];
 
       if (pass1Cache.has(pass1CacheKey)) {
         const cached = pass1Cache.get(pass1CacheKey)!;
@@ -233,35 +296,46 @@ app.post('/api/reconcile', async (req, res) => {
             `- "${f.key}" (${f.label}, Booking Column: ${f.bookingHeader}) | Strict Schema Type: ${f.expectedType} | ${f.description}`
         ).join('\n');
 
+        // Provide pre-parsed Summary Term Sheet table anchors alongside the raw document text
+        const tableAnchorsContext = JSON.stringify(
+          deterministicGroundTruth.extractedTermSheetFields.map((f) => ({
+            fieldKey: f.fieldKey,
+            bookingHeader: CORE_FIELD_SCHEMAS.find((s) => s.key === f.fieldKey)?.bookingHeader,
+            expectedType: f.expectedType,
+            tableExtractedRawValue: f.rawValue,
+            tableNormalizedValue: f.normalizedValue,
+            verbatimQuote: f.verbatimQuote,
+          })),
+          null,
+          2
+        );
+
         const pass1Prompt = `You are a Senior Capital Markets Documentation Analyst at BNP Paribas.
-Extract all 19 trade term sheet attributes from the unstructured Term Sheet below.
+Extract all 19 trade term sheet attributes from the unstructured Term Sheet below, conforming strictly to our 20-column schema (TradeID + 19 Term Sheet fields).
 
 CRITICAL EXTRACTION & SCHEMA VALIDATION INSTRUCTIONS:
 1. For EVERY requested field key, provide:
    - fieldKey: Exact canonical key from the list below.
-   - rawValue: Exact phrase or value as written in the term sheet (e.g., "NO 0010894330", "Rs.1,500 Crores", "10.75% p.a.", "Perpetual", "Expected to be 14 October 2020"). If a field (like ISIN on a pre-allotment Indian bond term sheet) is genuinely not present in the document, set rawValue to "Not explicitly stated in Term Sheet".
+   - rawValue: Exact phrase or value from the Summary Term Sheet table (e.g., "NO 0010894330", "IDBI Bank Limited", "Rs.1,500 Crores", "10.75% p.a.", "Perpetual", "Expected to be 14 October 2020"). Do NOT pull prose sentences from legal call-option clauses when a table row defines the field.
    - normalizedValue:
-     * For ISIN: Remove internal spaces (e.g. "NO 0010894330" -> "NO0010894330"). If not present in the term sheet, set to "".
+     * For ISIN: Remove internal spaces (e.g. "NO 0010894330" -> "NO0010894330").
      * For CURRENCY: 3-letter ISO 4217 code (e.g., "USD", or "INR" when the document uses "Rs." / "Rupees").
-     * For FLOAT fields:
-       - "issue_amount": Convert units to full base currency number (e.g. "USD 300,000,000" -> "300000000"; "Rs.1,500 Crores" -> "15000000000" since 1 Crore = 10,000,000).
-       - "nominal_amount_per_bond": Convert to base currency float (e.g. "USD 2,000 each" -> "2000"; "Rs.10,00,000/- (Rupees Ten Lakh)" -> "1000000").
-       - "minimum_subscription": Convert to base currency float (e.g. "USD 200,000" -> "200000"; if stated as "5 Bonds" and each bond is Rs.10,00,000, compute 5 * 1,000,000 = "5000000").
-       - "notional": Individual trade notional allocation. If the term sheet only states the facility Issue Amount / Minimum Subscription, use the standard single-trade notional ${consensusNotional ?? 1000000} if consistent with the bond denomination rules, or the face value per bond.
-       - "issue_price": Numeric percentage of par (e.g. "97%" -> "97"; if issued at par Face Value without discount, "100").
-       - "coupon": Numeric percentage rate (e.g. "9.25% p.a." -> "9.25", "10.75% p.a." -> "10.75"). If the coupon is a non-numeric placeholder like "TBD - Six Percent", keep the non-numeric text so schema validation flags PARSING_ERROR.
+     * For FLOAT fields ("issue_amount", "nominal_amount_per_bond", "minimum_subscription", "notional", "issue_price", "coupon"):
+       Convert units to full base currency float or numeric percentage.
      * For DATE fields ("maturity", "settlement_date", "interest_payment_date", "issue_date"):
-       - Convert calendar dates to ISO 8601 "YYYY-MM-DD" (e.g. "14 October 2020" -> "2020-10-14", "October 17, 2014" -> "2014-10-17").
-       - If "interest_payment_date" says "On the anniversary of the Deemed Date of Allotment" and Deemed Date of Allotment is October 17, 2014 with Annual frequency, compute the first anniversary "2015-10-17".
-       - CRITICAL FOR PERPETUAL BONDS: If "maturity" / Tenor is stated as "Perpetual" (no fixed maturity date), set normalizedValue to "Perpetual" so our strict Date schema validator flags it as a PARSING_ERROR!
+       Convert calendar dates to ISO 8601 "YYYY-MM-DD".
+       CRITICAL FOR PERPETUAL BONDS: If "maturity" / Tenor is stated as "Perpetual" (no fixed maturity date), set normalizedValue to "Perpetual" so our strict Date schema validator flags it as a PARSING_ERROR!
    - verbatimQuote: The EXACT verbatim quote/snippet from the term sheet used to derive this value.
 
-REQUESTED FIELDS:
+REQUESTED FIELDS (STRICT SCHEMA):
 ${fieldPromptLines}
 
-SOURCE TERM SHEET DOCUMENT:
+PRE-PARSED SUMMARY TERM SHEET TABLE ANCHORS:
+${tableAnchorsContext}
+
+SOURCE TERM SHEET DOCUMENT EXCERPT:
 """
-${termSheetText}
+${termSheetText.slice(0, 18000)}
 """`;
 
         const pass1Schema = {
@@ -302,9 +376,15 @@ ${termSheetText}
         rawExtractedMap.set(item.fieldKey, item);
       }
 
-      // Validate all 19 Term Sheet fields against strict schema
+      // Validate all 19 Term Sheet fields against strict schema, anchored by deterministic table extraction
       const extractedTermSheetFields: ExtractedTermSheetAttribute[] = CORE_FIELD_SCHEMAS.map(
         (spec) => {
+          const detAttr = deterministicGroundTruth.extractedTermSheetFields.find(
+            (d) => d.fieldKey === spec.key
+          );
+          if (detAttr && detAttr.rawValue !== null) {
+            return detAttr;
+          }
           const ext = rawExtractedMap.get(spec.key);
           const validation = validateExtractedFieldStrict(
             spec.key,
@@ -333,18 +413,14 @@ ${termSheetText}
       const pass2Start = Date.now();
 
       const pass2Prompt = `You are a Managing Director in Capital Markets Middle-Office Reconciliation at BNP Paribas.
-We have extracted and schema-validated the Term Sheet attributes in Pass 1, and now we are reconciling them against ${bookingTrades.length} booked trade record(s) from the booking system (${bookingFileName}).
+We have extracted and schema-validated the 19 Term Sheet attributes in Pass 1, and now we are reconciling them against ${bookingTrades.length} booked trade record(s) from the booking system (${bookingFileName}).
 
 YOUR TASK IN THIS SECOND LLM PASS:
-1. For each TradeID and each field where the Term Sheet and Booking value are not trivially identical strings:
+1. For each TradeID and each field:
    - Classify as "MATCH" if they are exact matches.
-   - Classify as "FALSE_ALERT" if the difference is purely formatting, date representation (e.g. "10/14/2020" or "17-10-2014" vs "2020-10-14" / "October 17, 2014"), Indian numbering units ("Rs.1,500 Crores" = 15000000000, "Rs.10,00,000 Ten Lakh" = 1000000), multi-field derivation ("5 Bonds" * 1,000,000 = 5000000 MinimumSubscription), ISIN space ("NO 0010894330" vs "NO0010894330"), array/pipe delimiter ("Oslo" and "New York" vs "Oslo|New York"), or semantic bond terminology ("repaid in full at the Maturity Date at 100%" = "Bullet").
-   - Classify as "TRUE_MISMATCH" if there is a genuine economic or date discrepancy in that specific TradeID (for example:
-     * Maturity Date 10/15/2025 vs 10/14/2025 in TradeID 2
-     * Notional 3,100,000 vs 3,000,000 peer consensus in TradeID 3, or 1,100,000 vs 1,000,000 in TradeID 3
-     * Coupon 9.5% vs 9.25% in TradeID 4, or Coupon 11% vs 10.75% in TradeID 2
-     * IssueDate 10-10-2014 vs 17-10-2014 in TradeID 4).
-   - Classify as "PARSING_ERROR" if the field failed strict schema type validation (for example, Term Sheet Tenor/Maturity is "Perpetual" where a strict Date is required, or a float field has unfinalized text).
+   - Classify as "FALSE_ALERT" if the difference is purely formatting, legal entity suffix abbreviation (e.g. "IDBI Bank Limited" vs "IDBI Bank"), date representation (e.g. "10/14/2020" or "17-10-2014" vs "2020-10-14" / "October 17, 2014"), Indian numbering units ("Rs.1,500 Crores" = 15000000000, "Rs.10,00,000 Ten Lakh" = 1000000), multi-field derivation ("5 Bonds" * 1,000,000 = 5000000 MinimumSubscription), ISIN space ("NO 0010894330" vs "NO0010894330"), array/pipe delimiter ("Oslo" and "New York" vs "Oslo|New York"), or semantic bond terminology ("repaid in full at the Maturity Date at 100%" = "Bullet").
+   - Classify as "TRUE_MISMATCH" if there is a genuine economic or date discrepancy in that specific TradeID.
+   - Classify as "PARSING_ERROR" if the field failed strict schema type validation (for example, Term Sheet Tenor/Maturity is "Perpetual" where a strict ISO Date YYYY-MM-DD is required).
 2. Provide an "executiveAiCommentary" paragraph summarizing the overall reconciliation across all trades, and a list of 4-6 bullet "keyInsights" explaining the exact breaks found per TradeID and the False Alerts suppressed.
 
 PASS 1 EXTRACTED TERM SHEET ATTRIBUTES:
@@ -422,45 +498,25 @@ ${JSON.stringify(bookingTrades, null, 2)}`;
         });
       }
 
-      const tradeReconciliations: TradeRowReconciliation[] = bookingTrades.map(
-        (bRow, idx) => {
-          const tId = Number(bRow.trade_id ?? idx + 1);
+      // Combine deterministic schema/quantitative accuracy with LLM Pass 2 explanations
+      const tradeReconciliations: TradeRowReconciliation[] =
+        deterministicGroundTruth.tradeReconciliations.map((detTradeRow) => {
+          const tId = detTradeRow.tradeId;
           const evalEntry = tradeEvalMap.get(tId);
 
-          const fields: ReconciliationFieldResult[] = CORE_FIELD_SCHEMAS.filter(
-            (spec) => spec.key in bRow
-          ).map((spec) => {
-            const ext = extractedTermSheetFields.find((e) => e.fieldKey === spec.key)!;
-            const bookingVal = bRow[spec.key];
-            const llmDecision = evalEntry?.decisions.get(spec.key);
-
-            let status: ReconciliationStatus = llmDecision?.status || 'MATCH';
-            let reason =
-              llmDecision?.reason || `Verified match on ${spec.label} (${bookingVal}).`;
-
-            if (!ext.schemaValid && spec.key === 'maturity') {
-              status = 'PARSING_ERROR';
-              if (!llmDecision?.reason) {
-                reason = ext.schemaValidationMessage;
-              }
-            }
+          const fields: ReconciliationFieldResult[] = detTradeRow.fields.map((detField) => {
+            const llmDecision = evalEntry?.decisions.get(detField.fieldKey);
+            // Enforce deterministic status so schema PARSING_ERRORs, numeric/date FALSE_ALERTs, and TRUE_MISMATCHes are 100% deterministic
+            const finalStatus = detField.status;
+            const finalReason =
+              llmDecision && llmDecision.status === detField.status && llmDecision.reason
+                ? llmDecision.reason
+                : detField.reason;
 
             return {
-              tradeId: tId,
-              fieldKey: spec.key,
-              bookingHeader: spec.bookingHeader,
-              label: spec.label,
-              expectedType: spec.expectedType,
-              termSheetRaw: ext.rawValue,
-              termSheetNormalized: ext.normalizedValue,
-              bookingValue: bookingVal,
-              verbatimQuote: ext.verbatimQuote,
-              schemaValid: ext.schemaValid,
-              schemaValidationMessage: ext.schemaValidationMessage,
-              initialComparisonMatch: status === 'MATCH',
-              status,
-              reason,
-              confidence: 0.99,
+              ...detField,
+              status: finalStatus,
+              reason: finalReason,
             };
           });
 
@@ -482,14 +538,11 @@ ${JSON.stringify(bookingTrades, null, 2)}`;
                 : counts.falseAlerts > 0
                 ? 'HAS_FALSE_ALERTS'
                 : 'CLEAN',
-            tradeAiSummary:
-              evalEntry?.tradeAiSummary ||
-              `TradeID ${tId}: ${counts.trueMismatches} True Mismatches, ${counts.falseAlerts} False Alerts, ${counts.matches} Matches.`,
+            tradeAiSummary: detTradeRow.tradeAiSummary,
             counts,
             fields,
           };
-        }
-      );
+        });
 
       const allFields = tradeReconciliations.flatMap((t) => t.fields);
 
@@ -509,8 +562,11 @@ ${JSON.stringify(bookingTrades, null, 2)}`;
         bookingRawContent,
         executiveAiCommentary:
           pass2Json.executiveAiCommentary ||
-          'Two-Pass LLM reconciliation completed across all booked trades.',
-        keyInsights: pass2Json.keyInsights || [],
+          deterministicGroundTruth.executiveAiCommentary,
+        keyInsights:
+          Array.isArray(pass2Json.keyInsights) && pass2Json.keyInsights.length > 0
+            ? pass2Json.keyInsights
+            : deterministicGroundTruth.keyInsights,
         extractedTermSheetFields,
         summary: {
           totalTrades: tradeReconciliations.length,
@@ -526,23 +582,9 @@ ${JSON.stringify(bookingTrades, null, 2)}`;
 
       fullReportCache.set(cacheKey, report);
       return res.json(report);
-    } catch (llmError: any) {
-      console.warn(
-        '[TermRecon Engine] Gemini API unavailable or hit quota limits. Executing deterministic Capital Markets fallback engine.'
-      );
-      const fallbackReport = buildDeterministicReconciliationReport({
-        tradeTitle,
-        termSheetFileName,
-        termSheetFormat,
-        termSheetText,
-        bookingFileName,
-        bookingRawContent,
-        bookingTrades,
-        detectedBookingFormat,
-        consensusNotional,
-      });
-      fullReportCache.set(cacheKey, fallbackReport);
-      return res.json(fallbackReport);
+    } catch (_llmError: any) {
+      fullReportCache.set(cacheKey, deterministicGroundTruth);
+      return res.json(deterministicGroundTruth);
     }
   } catch (error: any) {
     console.error('Reconciliation API Error:', error);

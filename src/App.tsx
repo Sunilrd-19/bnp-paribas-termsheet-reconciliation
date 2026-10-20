@@ -35,11 +35,13 @@ import {
   downloadReportPdf,
 } from './utils/exportRepoZip';
 import {
+  STRICT_EXTRACTION_JSON_SCHEMA,
+  STRICT_PYDANTIC_SCHEMA_CODE,
   buildDeterministicReconciliationReport,
   computeConsensusNotional,
   parseBookingMultiTrades,
 } from './utils/reconcileEngine';
-import { SAMPLE_SCENARIOS } from './data/sampleScenarios';
+import { CORE_FIELD_SCHEMAS, SAMPLE_SCENARIOS } from './data/sampleScenarios';
 import { ReconciliationAnalyticsDashboard } from './components/ReconciliationAnalyticsDashboard';
 
 type StatusFilter = 'ALL' | ReconciliationStatus;
@@ -123,6 +125,8 @@ export default function App() {
 
   // LLM Executive Insights Collapse State
   const [isInsightsCollapsed, setIsInsightsCollapsed] = useState<boolean>(false);
+  const [showSchemaModal, setShowSchemaModal] = useState<boolean>(false);
+  const [activeSchemaTab, setActiveSchemaTab] = useState<'TABLE' | 'PYDANTIC' | 'JSON_SCHEMA'>('TABLE');
 
   // Uploaded Document States (Clean zero-state — no pre-uploaded documents)
   const [termSheetFileName, setTermSheetFileName] = useState<string>('');
@@ -1557,6 +1561,37 @@ export default function App() {
                             </div>
                           </div>
 
+                          {/* Strict Pydantic / JSON Schema Validation Status Box */}
+                          <div
+                            className={`p-3.5 border rounded-sm ${
+                              selectedRow.schemaValid
+                                ? isDarkMode
+                                  ? 'bg-emerald-950/20 border-emerald-800/50'
+                                  : 'bg-emerald-50/60 border-emerald-200'
+                                : isDarkMode
+                                ? 'bg-indigo-950/30 border-indigo-700/60'
+                                : 'bg-indigo-50/70 border-indigo-200'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <span className={`text-xs font-semibold ${headingText}`}>
+                                Strict Schema Validation ({selectedRow.bookingHeader} : {selectedRow.expectedType})
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setShowSchemaModal((prev) => !prev)}
+                                className={`text-[11px] font-semibold underline cursor-pointer ${
+                                  isDarkMode ? 'text-emerald-400' : 'text-[#008053]'
+                                }`}
+                              >
+                                {showSchemaModal ? 'Hide 20-Col Schema' : 'View Full 20-Col Schema'}
+                              </button>
+                            </div>
+                            <p className={`text-xs leading-relaxed font-mono ${mutedText}`}>
+                              {selectedRow.schemaValidationMessage}
+                            </p>
+                          </div>
+
                           <div>
                             <div className={`text-xs font-semibold mb-1.5 flex items-center justify-between ${headingText}`}>
                               <span>Exact Quote / Snippet from Source Term Sheet</span>
@@ -1577,6 +1612,88 @@ export default function App() {
                               {selectedRow.reason}
                             </p>
                           </div>
+
+                          {showSchemaModal && (
+                            <div className={`p-4 border rounded-sm space-y-3 ${subCardBg}`}>
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className={`text-xs font-bold ${headingText}`}>
+                                  Strict 20-Column Schema (TradeID + 19 Term Sheet Attributes)
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  {(
+                                    [
+                                      { id: 'TABLE', label: '20 Columns' },
+                                      { id: 'PYDANTIC', label: 'Pydantic v2' },
+                                      { id: 'JSON_SCHEMA', label: 'JSON Schema' },
+                                    ] as const
+                                  ).map((t) => (
+                                    <button
+                                      key={t.id}
+                                      type="button"
+                                      onClick={() => setActiveSchemaTab(t.id)}
+                                      className={`px-2 py-1 text-[11px] font-semibold rounded-xs cursor-pointer ${
+                                        activeSchemaTab === t.id
+                                          ? 'bg-[#008053] text-white'
+                                          : isDarkMode
+                                          ? 'bg-slate-800 text-slate-300'
+                                          : 'bg-white text-slate-700 border border-slate-200'
+                                      }`}
+                                    >
+                                      {t.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {activeSchemaTab === 'TABLE' && (
+                                <div className="max-h-60 overflow-y-auto border border-slate-300/40 rounded-xs">
+                                  <table className="w-full text-left text-[11px] border-collapse">
+                                    <thead>
+                                      <tr
+                                        className={
+                                          isDarkMode
+                                            ? 'bg-slate-900 text-slate-300 border-b border-slate-800'
+                                            : 'bg-slate-100 text-slate-700 border-b border-slate-200'
+                                        }
+                                      >
+                                        <th className="py-1.5 px-2 font-mono">Column Name</th>
+                                        <th className="py-1.5 px-2 font-mono">Strict Type</th>
+                                        <th className="py-1.5 px-2">Validation Rule</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-300/30">
+                                      <tr>
+                                        <td className="py-1.5 px-2 font-mono font-bold">TradeID</td>
+                                        <td className="py-1.5 px-2 font-mono">INTEGER</td>
+                                        <td className="py-1.5 px-2">Unique trade record identifier (ge=1)</td>
+                                      </tr>
+                                      {CORE_FIELD_SCHEMAS.map((s) => (
+                                        <tr key={s.key}>
+                                          <td className="py-1.5 px-2 font-mono font-bold">
+                                            {s.bookingHeader}
+                                          </td>
+                                          <td className="py-1.5 px-2 font-mono">{s.expectedType}</td>
+                                          <td className="py-1.5 px-2">{s.description}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+
+                              {activeSchemaTab === 'PYDANTIC' && (
+                                <pre className="p-3 bg-[#0B111E] text-emerald-300 font-mono text-[11px] rounded-xs overflow-x-auto max-h-60 leading-relaxed">
+                                  {STRICT_PYDANTIC_SCHEMA_CODE}
+                                </pre>
+                              )}
+
+                              {activeSchemaTab === 'JSON_SCHEMA' && (
+                                <pre className="p-3 bg-[#0B111E] text-emerald-300 font-mono text-[11px] rounded-xs overflow-x-auto max-h-60 leading-relaxed">
+                                  {JSON.stringify(STRICT_EXTRACTION_JSON_SCHEMA, null, 2)}
+                                </pre>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
