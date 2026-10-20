@@ -20,7 +20,7 @@ An end-to-end, fully automated Capital Markets trade reconciliation pipeline bui
 
 | Assignment Requirement | Implementation Details |
 | :--- | :--- |
-| **1. Automated Parsing & Structured Extraction** | Uses \`pypdf\` and \`python-docx\` to extract raw document text and tables from PDF and Word files, then submits content programmatically to \`gemini-3.8-flash\` (or \`gemini-2.5-flash\`) via the official \`google-genai\` SDK. |
+| **1. Automated Parsing & Structured Extraction** | Uses \`pypdf\` and \`python-docx\` to extract raw document text and tables from PDF and Word files, then submits content programmatically to \`gemini-3-flash-preview\` (or \`gemini-2.5-flash\`) via the official \`google-genai\` SDK. |
 | **Strict Schema Validation (\`Parsing Error\` vs \`Mismatch\`)** | Defines strict Pydantic v2 models (\`src/schemas.py\`) with custom field validators for ISO 6166 ISINs, ISO 4217 currencies, numeric floats (Notional, Coupon, Issue Price), and ISO 8601 dates. Any field failing type validation (e.g., \`"TBD - Six Point Five Percent"\` where a \`float\` is expected) is caught and flagged as \`PARSING_ERROR\` rather than \`MISMATCH\`. |
 | **Verbatim Evidence Extraction** | Every extracted field is paired with its exact verbatim \`verbatim_quote\` from the source document to guarantee zero hallucination and full auditability. |
 | **2. Automated Booking Extract Ingestion** | \`src/booking_loader.py\` automatically detects and parses \`.csv\`, \`.json\`, and \`.xml\` booking system extracts, mapping diverse column/key naming conventions into canonical trade keys. |
@@ -185,7 +185,7 @@ To solve this with 100% deterministic auditability, we architected a **Two-Pass 
 ## 2. LLM API Integration & Strict Schema Validation Design
 
 ### Programmatic API & Structured Outputs
-All LLM interactions execute programmatically via the official Google GenAI SDK (\`google-genai\`) using \`gemini-3.8-flash\` (compatible with free-tier developer keys) with \`temperature=0.0\` and structured JSON schema enforcement (\`response_mime_type="application/json"\`). Exponential backoff with jitter handles transient HTTP 429/503 rate limits gracefully.
+All LLM interactions execute programmatically via the official Google GenAI SDK (\`google-genai\`) using \`gemini-3-flash-preview\` (compatible with free-tier developer keys) with \`temperature=0.0\` and structured JSON schema enforcement (\`response_mime_type="application/json"\`). Exponential backoff with jitter handles transient HTTP 429/503 rate limits gracefully.
 
 ### Two-Layer Schema Validation (\`Parsing Error\` vs. \`Mismatch\`)
 A core requirement of the assignment is ensuring that **type validation failures are flagged as a \`Parsing Error\` rather than a \`Mismatch\`**. If we forced the LLM's JSON schema to output a strict JSON \`number\` directly during Pass 1, the LLM might either hallucinate a number for \`"TBD - Six Point Five Percent"\` or fail the entire HTTP request.

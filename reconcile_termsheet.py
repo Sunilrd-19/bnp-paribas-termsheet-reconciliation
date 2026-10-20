@@ -216,9 +216,11 @@ def load_booking_extract(file_path: str) -> List[Dict[str, Any]]:
 # ============================================================================
 
 GEMINI_MODELS = [
+    "gemini-3-flash-preview",
     "gemini-2.5-flash",
+    "gemini-3.1-pro-preview",
+    "gemini-2.5-pro",
     "gemini-2.5-flash-lite",
-    "gemini-2.0-flash",
 ]
 
 
@@ -482,12 +484,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Automated Term Sheet & Booking Reconciliation CLI")
     parser.add_argument(
         "--termsheet",
-        default="sample_data/Genel_Energy_Finance_4_Term_Sheet.txt",
+        default="sample_data/4.Term Sheet - Genel Energy.pdf",
         help="Path to Term Sheet (PDF, DOCX, or TXT)",
     )
     parser.add_argument(
         "--booking",
-        default="sample_data/Genel_Energy_bond_trades.csv",
+        default="sample_data/Genel_Energy.csv",
         help="Path to Booking Extract (CSV or JSON)",
     )
     parser.add_argument("--output", default="reconciliation_output.json", help="Output JSON report path")
